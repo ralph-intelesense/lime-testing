@@ -4,6 +4,7 @@
 #include <string_view>
 #include <cmath>
 #include <csignal>
+#include <complex>
 
 #include <stdio.h>
 // #include <starg.h>
@@ -13,13 +14,18 @@ using namespace lime;
 using namespace std::literals::string_view_literals;
 
 static const double frequencyLO = 467e6;
+double frequencyStart = 400e6;
+double frequencyEnd = 500e6;
 float sampleRate = 10e6;
+int cot_samples = 10;
+int sideRate = sampleRate / 2;
+
 static uint8_t chipIndex = 0;
 
 bool stopProgram(false);
 void intHandler(int dummy)
 {
-    std::cout << "Stopping=n"sv;
+    std::cout << "Stopping\n"sv;
     stopProgram = true;
 }
 
@@ -30,7 +36,6 @@ static void LogCallback(LogLevel lvl, const std::string& msg)
         return;
     std::cout << msg << std::endl;
 }
-
 
 
 int main(int argc, char** argv)
@@ -104,7 +109,39 @@ int main(int argc, char** argv)
     }
     std::cout << "Stream started ...\n"sv;
 
-    
+    auto startTime = std::chrono::high_resolution_clock::now();
+    auto t1 = startTime;
+    auto t2 = t1;
+
+    int totalSamplesReceived = 0;
+
+    StreamMeta rxMeta{};
+    while (std::chrono::high_resolution_clock::now() - startTime < std::chrono::seconds(5) && !stopProgram)
+    {
+        // TODO: receive samples and loop from freq start to end
+        for (int i = int(frequencyStart + sideRate); i < int(frequencyEnd + sideRate); i += int(sampleRate))
+        {  
+            std::cout << "step i:"sv << i << std::endl;
+            device->StreamStop(chipIndex);
+            for (int c = 0; c < 2; ++c)
+                config.channel[c].rx.centerFrequency = i;
+
+            device->StreamSetup(stream, chipIndex);
+            device->StreamStart(chipIndex);
+            uint32_t samplesRead = device->StreamRx(chipIndex, rxSamples, samplesInBuffer, &rxMeta);
+            // std::cout << rxSamples.real() << std::endl;
+            // std::cout << "hello!: "sv << i/1e6 << std::endl;
+
+            for (int s = 0; s < samplesInBuffer; ++s)
+            {
+                std::cout << "s: " << s << " " << rxSamples[0][s].imag() << "i + " << rxSamples[0][s].real() << "j " << std::endl; 
+            }
+            
+            // uint32_t samplesRead = device->StreamRx(chipIndex, rxSamples, samplesInBuffer, &rxMeta);
+            
+        }
+        
+    }
 
     DeviceRegistry::freeDevice(device);
     for (int i = 0; i < 2; ++i)

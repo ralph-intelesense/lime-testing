@@ -184,7 +184,7 @@ int main(int argc, char** argv)
     {
         uint32_t samplesRead = device->StreamRx(chipIndex, rxSamples, samplesInBuffer, &rxMeta);
         totalSamplesReceived += samplesRead;
-
+        std::cout << "totalSamplesReceived " << totalSamplesReceived << std::endl; 
         // process samples
         for (uint32_t n = 0; n < samplesRead; ++n)
         {
